@@ -4,69 +4,66 @@ document.getElementById('sendCommand').addEventListener('click', sendCommand);
 document.getElementById('clearDatabase').addEventListener('click', clearDatabase);
 
 function sendCommand() {
-    const command = document.getElementById('commandInput').value;
-    console.log(`Sending command: ${command}`);
-    
-    if (command.toLowerCase() === 'exit' || command.toLowerCase() === 'quit') {
-        console.log('Exit or quit command received.');
-        return;
-    } else if (command.toLowerCase() === '04') {
-        clearDatabase();
-        console.log('Clear database command received.');
+    const command = document.getElementById('commandInput').value.trim();
+    if (!command) {
+        alert('Please enter a command.');
         return;
     }
 
     const commandsRef = db.ref('shell/commands');
-    commandsRef.push().set({ 'command': command })
+    commandsRef.push({ command })
         .then(() => {
             console.log('Command sent successfully.');
-            checkOutput();
+            document.getElementById('commandInput').value = ''; // Clear input field
         })
         .catch(error => {
             console.error('Error sending command:', error);
+            alert('Error sending command. Please try again.');
         });
 }
 
 function clearDatabase() {
+    const confirmClear = confirm('Are you sure you want to clear the database? This action cannot be undone.');
+    if (!confirmClear) return;
+
     const shellRef = db.ref('shell');
     shellRef.remove()
         .then(() => {
             console.log('Database cleared successfully.');
+            document.getElementById('output').innerHTML = ''; // Clear output display
         })
         .catch(error => {
             console.error('Error clearing database:', error);
+            alert('Error clearing database. Please try again.');
         });
 }
 
-function checkOutput() {
+function readOutput() {
     const outputRef = db.ref('shell/output');
-    outputRef.on('value', (snapshot) => {
-        const outputDiv = document.getElementById('output');
-        outputDiv.innerHTML = '';
+    outputRef.once('value', snapshot => {
         const output = snapshot.val();
-        console.log('Checking output:', output);
-        
         if (output) {
             for (const key in output) {
-                const value = output[key];
-                const outputText = value.output ? value.output : value;
-                const p = document.createElement('p');
-                p.textContent = `Output: ${outputText}`;
-                outputDiv.appendChild(p);
-
-                // Remove the output once read
-                db.ref(`shell/output/${key}`).remove()
-                    .then(() => {
-                        console.log('Output removed successfully.');
-                    })
-                    .catch(error => {
-                        console.error('Error removing output:', error);
-                    });
+                const { output: outputText } = output[key];
+                displayOutput(outputText);
+                outputRef.child(key).remove(); // Remove output after displaying
             }
         } else {
-            const p = document.createElement('p');
-            p.textContent = 'No output received.';
-            outputDiv.appendChild(p);
+            displayOutput('No output received.');
         }
+    }, error => {
+        console.error('Error reading output:', error);
+        alert('Error reading output. Please try again.');
     });
 }
+
+function displayOutput(outputText) {
+    const outputDiv = document.getElementById('output');
+    const p = document.createElement('p');
+    p.textContent = `Output: ${outputText}`;
+    outputDiv.appendChild(p);
+}
+
+// Read output initially and then listen for changes
+readOutput();
+db.ref('shell/output').on('child_added', () => readOutput());

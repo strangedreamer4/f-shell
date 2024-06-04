@@ -1,9 +1,6 @@
-console.log("Firebase initialized");
-
-// Send command function
+// Function to send a command to the server
 function sendCommand() {
     const command = document.getElementById('commandInput').value.trim();
-    console.log('Command to be sent:', command);
 
     if (!command) {
         alert('Please enter a command.');
@@ -22,9 +19,10 @@ function sendCommand() {
         });
 }
 
-// Clear database function
+// Function to clear the database
 function clearDatabase() {
     const confirmClear = confirm('Are you sure you want to clear the database? This action cannot be undone.');
+
     if (!confirmClear) return;
 
     const shellRef = firebase.database().ref('shell');
@@ -39,14 +37,12 @@ function clearDatabase() {
         });
 }
 
-// Read output function
+// Function to read the output from the server
 function readOutput() {
     const outputRef = firebase.database().ref('shell/output');
-    console.log('Reading output...');
 
     outputRef.once('value', snapshot => {
         const output = snapshot.val();
-        console.log('Output:', output);
 
         if (output) {
             for (const key in output) {
@@ -63,7 +59,7 @@ function readOutput() {
     });
 }
 
-// Display output function
+// Function to display output on the web page
 function displayOutput(outputText) {
     const outputDiv = document.getElementById('output');
     const p = document.createElement('p');
@@ -71,6 +67,6 @@ function displayOutput(outputText) {
     outputDiv.appendChild(p);
 }
 
-// Listen for changes in output and read initially
+// Initial setup: listen for changes in output and read initially
 readOutput();
 firebase.database().ref('shell/output').on('child_added', () => readOutput());

